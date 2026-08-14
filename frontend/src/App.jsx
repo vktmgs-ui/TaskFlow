@@ -8,10 +8,12 @@ function App() {
   const [task, setTask] = useState("");
   const [tasks, setTasks] = useState([]);
   const [editingTask, setEditingTask] = useState(null);
+
   const [search, setSearch] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [sortBy, setSortBy] = useState("none");
 
+  // Load tasks
   const loadTasks = async () => {
     try {
       const response = await fetch(`${API_URL}/tasks`);
@@ -31,6 +33,7 @@ function App() {
     loadTasks();
   }, []);
 
+  // Add task
   const addTask = async () => {
     if (!task.trim()) {
       alert("Please enter a task");
@@ -67,6 +70,7 @@ function App() {
     }
   };
 
+  // Complete / Pending
   const toggleComplete = async (item) => {
     try {
       const response = await fetch(`${API_URL}/tasks/${item.id}`, {
@@ -95,12 +99,15 @@ function App() {
     }
   };
 
+  // Delete task
   const deleteTask = async (taskId) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this task?"
     );
 
-    if (!confirmDelete) return;
+    if (!confirmDelete) {
+      return;
+    }
 
     try {
       const response = await fetch(`${API_URL}/tasks/${taskId}`, {
@@ -119,6 +126,7 @@ function App() {
     }
   };
 
+  // Start editing
   const startEdit = (item) => {
     setEditingTask({
       id: item.id,
@@ -129,6 +137,7 @@ function App() {
     });
   };
 
+  // Save edited task
   const saveEdit = async () => {
     if (!editingTask.title.trim()) {
       alert("Task title cannot be empty");
@@ -161,6 +170,7 @@ function App() {
 
       setEditingTask(null);
       loadTasks();
+
       alert("Task updated successfully!");
     } catch (error) {
       console.error(error);
@@ -168,51 +178,58 @@ function App() {
     }
   };
 
+  // Search + Filter + Sort
   const filteredTasks = tasks
-  .filter((item) =>
-    item.title.toLowerCase().includes(search.toLowerCase())
-  )
-  .filter((item) =>
-    priorityFilter === "all"
-      ? true
-      : item.priority === priorityFilter
-  )
-  .sort((a, b) => {
-    if (sortBy === "title") {
-      return a.title.localeCompare(b.title);
-    }
+    .filter((item) =>
+      item.title.toLowerCase().includes(search.toLowerCase())
+    )
+    .filter((item) =>
+      priorityFilter === "all"
+        ? true
+        : item.priority === priorityFilter
+    )
+    .sort((a, b) => {
+      if (sortBy === "title") {
+        return a.title.localeCompare(b.title);
+      }
 
-    if (sortBy === "priority") {
-      const order = {
-        high: 1,
-        medium: 2,
-        low: 3,
-      };
+      if (sortBy === "priority") {
+        const order = {
+          high: 1,
+          medium: 2,
+          low: 3,
+        };
 
-      return (
-        (order[a.priority] || 99) -
-        (order[b.priority] || 99)
-      );
-    }
+        return (
+          (order[a.priority] || 99) -
+          (order[b.priority] || 99)
+        );
+      }
 
-    return 0;
-  });
+      return 0;
+    });
 
-const totalTasks = tasks.length;
+  // Statistics
+  const totalTasks = tasks.length;
 
-const completedTasks = tasks.filter(
-  (item) => item.completed
-).length;
+  const completedTasks = tasks.filter(
+    (item) => item.completed
+  ).length;
 
-const pendingTasks = totalTasks - completedTasks;
+  const pendingTasks = totalTasks - completedTasks;
+
   return (
     <div className="taskflow">
 
+      {/* Navbar */}
       <nav className="navbar">
         <div className="logo">TaskFlow</div>
-        <div className="nav-text">Task Management Dashboard</div>
+        <div className="nav-text">
+          Task Management Dashboard
+        </div>
       </nav>
 
+      {/* Dashboard */}
       <main className="dashboard">
 
         <h1 className="dashboard-title">
@@ -223,6 +240,7 @@ const pendingTasks = totalTasks - completedTasks;
           Manage your tasks efficiently and stay productive.
         </p>
 
+        {/* Statistics */}
         <div className="stats">
 
           <div className="stat-card">
@@ -242,7 +260,9 @@ const pendingTasks = totalTasks - completedTasks;
 
         </div>
 
+        {/* Tasks Header */}
         <div className="tasks-header">
+
           <h2>My Tasks</h2>
 
           <button
@@ -251,42 +271,43 @@ const pendingTasks = totalTasks - completedTasks;
           >
             + Add Task
           </button>
-         <div className="filters">
-  <input
-    type="text"
-    placeholder="Search tasks..."
-    value={search}
-    onChange={(e) => setSearch(e.target.value)}
-    <input
-  type="text"
-  placeholder="Search tasks..."
-  value={search}
-  onChange={(e) => setSearch(e.target.value)}
-/>
 
-  <select
-    value={priorityFilter}
-    onChange={(e) => setPriorityFilter(e.target.value)}
-    
-  >
-    <option value="all">All Priorities</option>
-    <option value="high">High</option>
-    <option value="medium">Medium</option>
-    <option value="low">Low</option>
-  </select>
-
-  <select
-    value={sortBy}
-    onChange={(e) => setSortBy(e.target.value)}
-    
-  >
-    <option value="none">Sort By</option>
-    <option value="title">Title</option>
-    <option value="priority">Priority</option>
-  </select>
-</div>
         </div>
 
+        {/* Search / Filter / Sort */}
+        <div className="filters">
+
+          <input
+            type="text"
+            placeholder="Search tasks..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+
+          <select
+            value={priorityFilter}
+            onChange={(e) =>
+              setPriorityFilter(e.target.value)
+            }
+          >
+            <option value="all">All Priorities</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+          >
+            <option value="none">Sort By</option>
+            <option value="title">Title</option>
+            <option value="priority">Priority</option>
+          </select>
+
+        </div>
+
+        {/* Add Task Form */}
         {showForm && (
           <div className="task-form">
 
@@ -317,6 +338,7 @@ const pendingTasks = totalTasks - completedTasks;
           </div>
         )}
 
+        {/* Edit Form */}
         {editingTask && (
           <div className="edit-form">
 
@@ -376,12 +398,13 @@ const pendingTasks = totalTasks - completedTasks;
           </div>
         )}
 
+        {/* Task List */}
         <div>
 
-          {tasks.length === 0 ? (
+          {filteredTasks.length === 0 ? (
             <p>No tasks found.</p>
           ) : (
-           filteredTasks.map((item) => (
+            filteredTasks.map((item) => (
 
               <div
                 key={item.id}
@@ -390,6 +413,7 @@ const pendingTasks = totalTasks - completedTasks;
                 }`}
               >
 
+                {/* Task Title */}
                 <h3
                   className={`task-title ${
                     item.completed ? "completed" : ""
@@ -398,23 +422,45 @@ const pendingTasks = totalTasks - completedTasks;
                   {item.title}
                 </h3>
 
+                {/* Priority */}
                 <p className="task-info">
+
                   <strong>Priority:</strong>{" "}
-                  {item.priority}
+
+                  <span
+                    className={`priority-badge ${item.priority}`}
+                  >
+                    {item.priority.toUpperCase()}
+                  </span>
+
                 </p>
 
+                {/* Due Date */}
                 <p className="task-info">
                   <strong>Due:</strong>{" "}
                   {item.due_date || "Not set"}
                 </p>
 
+                {/* Status */}
                 <p className="task-info">
+
                   <strong>Status:</strong>{" "}
-                  {item.completed
-                    ? "Completed"
-                    : "Pending"}
+
+                  <span
+                    className={`status-badge ${
+                      item.completed
+                        ? "completed"
+                        : "pending"
+                    }`}
+                  >
+                    {item.completed
+                      ? "COMPLETED"
+                      : "PENDING"}
+                  </span>
+
                 </p>
 
+                {/* Complete */}
                 <button
                   className="complete-btn"
                   onClick={() => toggleComplete(item)}
@@ -424,6 +470,7 @@ const pendingTasks = totalTasks - completedTasks;
                     : "Complete Task"}
                 </button>
 
+                {/* Edit */}
                 <button
                   className="edit-btn"
                   onClick={() => startEdit(item)}
@@ -431,6 +478,7 @@ const pendingTasks = totalTasks - completedTasks;
                   Edit
                 </button>
 
+                {/* Delete */}
                 <button
                   className="delete-btn"
                   onClick={() => deleteTask(item.id)}
@@ -446,6 +494,7 @@ const pendingTasks = totalTasks - completedTasks;
         </div>
 
       </main>
+
     </div>
   );
 }
