@@ -63,3 +63,29 @@ TaskFlow/
 └── .github/
     └── workflows/
         └── ci.yml
+
+## 📸 API Demo
+
+### Swagger API Documentation
+
+TaskFlow provides interactive API documentation using FastAPI Swagger UI.
+
+### AI Quick Add
+
+The Quick Add API converts a natural-language task description into a structured task.
+
+Example:
+
+```json
+{
+  "description": "Prepare presentation tomorrow, high priority",
+  "project_id": 1
+}
+
+{
+  "id": 3,
+  "due_date": "tomorrow",
+  "title": "Prepare presentation , high priority",
+  "priority": "medium",
+  "project_id": 1
+}
