@@ -251,36 +251,23 @@ const pendingTasks = totalTasks - completedTasks;
           >
             + Add Task
           </button>
-          <div
-  style={{
-    display: "flex",
-    gap: "10px",
-    marginTop: "20px",
-    marginBottom: "20px",
-    flexWrap: "wrap",
-  }}
->
+         <div className="filters">
   <input
     type="text"
     placeholder="Search tasks..."
     value={search}
     onChange={(e) => setSearch(e.target.value)}
-    style={{
-      padding: "10px",
-      border: "1px solid #ddd",
-      borderRadius: "6px",
-      minWidth: "220px",
-    }}
-  />
+    <input
+  type="text"
+  placeholder="Search tasks..."
+  value={search}
+  onChange={(e) => setSearch(e.target.value)}
+/>
 
   <select
     value={priorityFilter}
     onChange={(e) => setPriorityFilter(e.target.value)}
-    style={{
-      padding: "10px",
-      border: "1px solid #ddd",
-      borderRadius: "6px",
-    }}
+    
   >
     <option value="all">All Priorities</option>
     <option value="high">High</option>
@@ -291,11 +278,7 @@ const pendingTasks = totalTasks - completedTasks;
   <select
     value={sortBy}
     onChange={(e) => setSortBy(e.target.value)}
-    style={{
-      padding: "10px",
-      border: "1px solid #ddd",
-      borderRadius: "6px",
-    }}
+    
   >
     <option value="none">Sort By</option>
     <option value="title">Title</option>
