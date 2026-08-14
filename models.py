@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -30,5 +30,6 @@ class Task(Base):
     priority = Column(String, nullable=False)
     due_date = Column(String, nullable=True)
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    completed = Column(Boolean, default=False, nullable=False)
 
     project = relationship("Project", back_populates="tasks")

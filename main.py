@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, Query, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from quick_add import parse_quick_add
 from database import engine, Base, get_db
@@ -15,6 +16,17 @@ from algorithms import insertion_sort, binary_search, linear_search
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
@@ -150,6 +162,7 @@ def update_task(
     task.title = task_data.title
     task.priority = task_data.priority
     task.due_date = task_data.due_date
+    task.completed = task_data.completed
 
     db.commit()
     db.refresh(task)

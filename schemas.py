@@ -28,12 +28,13 @@ class TaskCreate(BaseModel):
 
         return value
 class TaskUpdate(BaseModel):
-        title: str
-        priority: str = Field(
-            ...,
-            pattern="^(low|medium|high)$"
-        )
-        due_date: str | None = None
+    title: str
+    priority: str = Field(
+        ...,
+        pattern="^(low|medium|high)$"
+    )
+    due_date: str | None = None
+    completed: bool = False
 
 class QuickAddRequest(BaseModel):
     description: str
