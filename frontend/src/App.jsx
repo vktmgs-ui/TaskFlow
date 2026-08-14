@@ -242,6 +242,29 @@ function App() {
 
         {/* Statistics */}
         <div className="stats">
+          <div className="progress-card">
+  <div className="progress-header">
+    <span>Task Progress</span>
+    <strong>
+      {totalTasks === 0
+        ? 0
+        : Math.round((completedTasks / totalTasks) * 100)}
+      %
+    </strong>
+  </div>
+
+  <div className="progress-bar">
+    <div
+      className="progress-fill"
+      style={{
+        width:
+          totalTasks === 0
+            ? "0%"
+            : `${(completedTasks / totalTasks) * 100}%`,
+      }}
+    />
+  </div>
+</div>
 
           <div className="stat-card">
             <h2>{totalTasks}</h2>
