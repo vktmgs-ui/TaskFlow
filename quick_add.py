@@ -27,17 +27,27 @@ def build_prompt(description: str):
 
 
 def parse_quick_add(description: str):
-    # Lower-case copy only for keyword matching
     lower_text = description.lower()
 
     # -------------------------
     # 1. PRIORITY
     # -------------------------
 
-    if "urgent" in lower_text or "asap" in lower_text:
+    if (
+        "urgent" in lower_text
+        or "asap" in lower_text
+        or "high priority" in lower_text
+        or "high-priority" in lower_text
+    ):
         priority = "high"
-    elif "whenever" in lower_text or "low priority" in lower_text:
+
+    elif (
+        "whenever" in lower_text
+        or "low priority" in lower_text
+        or "low-priority" in lower_text
+    ):
         priority = "low"
+
     else:
         priority = "medium"
 
@@ -60,14 +70,12 @@ def parse_quick_add(description: str):
 
     due_date_hint = None
 
-    # First check multi/specific phrases
     for phrase in date_phrases:
         if phrase in lower_text:
             due_date_hint = phrase
             break
 
-    # If no "next weekday" phrase found,
-    # check bare weekday names
+    # Check weekday names
     if due_date_hint is None:
         weekdays = [
             "monday",
@@ -90,27 +98,28 @@ def parse_quick_add(description: str):
 
     title = description
 
-    # Remove ALL priority keywords
+    # Remove priority phrases from title
     priority_patterns = [
         r"\burgent\b",
         r"\basap\b",
         r"\bwhenever\b",
-        r"\blow priority\b",
+        r"\bhigh[\s-]+priority\b",
+        r"\blow[\s-]+priority\b",
     ]
 
     for pattern in priority_patterns:
-        title = re.sub(pattern, "", title, flags=re.IGNORECASE)
-
-    # Remove ALL occurrences of the matched due-date phrase
-    if due_date_hint:
         title = re.sub(
-            re.escape(due_date_hint),
+            pattern,
             "",
             title,
             flags=re.IGNORECASE
         )
 
-    title = title.strip()
+    # Clean extra spaces before/after punctuation
+    title = re.sub(r"\s*,\s*", " ", title)
+    title = re.sub(r"\s+", " ", title)
+
+    title = title.strip(" ,.-")
 
     if not title:
         title = "Untitled task"
@@ -120,4 +129,3 @@ def parse_quick_add(description: str):
         "priority": priority,
         "due_date_hint": due_date_hint
     }
-
