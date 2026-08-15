@@ -1,9 +1,15 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./App.css";
 
 const API_URL = "http://127.0.0.1:8000";
 
 function App() {
+  const navigate = useNavigate();
+
+  const [user, setUser] = useState(null);
+  const [project, setProject] = useState(null);
+
   const [showForm, setShowForm] = useState(false);
   const [task, setTask] = useState("");
   const [tasks, setTasks] = useState([]);
@@ -13,30 +19,141 @@ function App() {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [sortBy, setSortBy] = useState("none");
 
-  // Load Tasks
-  const loadTasks = async () => {
+  const [loading, setLoading] = useState(true);
+
+  // --------------------------------------------------
+  // Get logged-in user
+  // --------------------------------------------------
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem("taskflow_user");
+
+    if (!savedUser) {
+      navigate("/login");
+      return;
+    }
+
     try {
-      const response = await fetch(`${API_URL}/tasks`);
+      const parsedUser = JSON.parse(savedUser);
+
+      if (!parsedUser.id) {
+        localStorage.removeItem("taskflow_user");
+        navigate("/login");
+        return;
+      }
+
+      setUser(parsedUser);
+    } catch (error) {
+      console.error("Invalid user data:", error);
+      localStorage.removeItem("taskflow_user");
+      navigate("/login");
+    }
+  }, [navigate]);
+
+  // --------------------------------------------------
+  // Load user's project
+  // --------------------------------------------------
+
+  const loadProject = async (userId) => {
+    try {
+      const response = await fetch(
+        `${API_URL}/users/${userId}/projects`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to load project");
+      }
+
+      const data = await response.json();
+
+      if (data.length === 0) {
+        throw new Error("No project found");
+      }
+
+      const userProject = data[0];
+
+      setProject(userProject);
+
+      return userProject;
+    } catch (error) {
+      console.error("Error loading project:", error);
+      alert("Unable to load your project");
+      return null;
+    }
+  };
+
+  // --------------------------------------------------
+  // Load tasks for current project
+  // --------------------------------------------------
+
+  const loadTasks = async (projectId) => {
+    try {
+      const response = await fetch(
+        `${API_URL}/tasks?project_id=${projectId}`
+      );
 
       if (!response.ok) {
         throw new Error("Failed to load tasks");
       }
 
       const data = await response.json();
+
       setTasks(data);
     } catch (error) {
       console.error("Error loading tasks:", error);
+      alert("Unable to load tasks");
     }
   };
 
-  useEffect(() => {
-    loadTasks();
-  }, []);
+  // --------------------------------------------------
+  // Initialize Dashboard
+  // --------------------------------------------------
 
+  useEffect(() => {
+    const initializeDashboard = async () => {
+      if (!user) {
+        return;
+      }
+
+      setLoading(true);
+
+      let currentProject = null;
+
+      // Login response already contains project_id
+      if (user.project_id) {
+        currentProject = {
+          id: user.project_id,
+          name: "My Tasks",
+          owner_id: user.id,
+        };
+
+        setProject(currentProject);
+      } else {
+        currentProject = await loadProject(user.id);
+      }
+
+      if (currentProject) {
+        await loadTasks(currentProject.id);
+      }
+
+      setLoading(false);
+    };
+
+    initializeDashboard();
+  }, [user]);
+
+  // --------------------------------------------------
   // Add Task
+  // --------------------------------------------------
+
   const addTask = async () => {
     if (!task.trim()) {
       alert("Please enter a task");
+      return;
+    }
+
+    if (!project) {
+      alert("Project is not available");
       return;
     }
 
@@ -49,8 +166,8 @@ function App() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            description: task,
-            project_id: 1,
+            description: task.trim(),
+            project_id: project.id,
           }),
         }
       );
@@ -65,7 +182,7 @@ function App() {
       setTask("");
       setShowForm(false);
 
-      await loadTasks();
+      await loadTasks(project.id);
 
       alert("Task added successfully!");
     } catch (error) {
@@ -74,7 +191,10 @@ function App() {
     }
   };
 
+  // --------------------------------------------------
   // Complete / Pending
+  // --------------------------------------------------
+
   const toggleComplete = async (item) => {
     try {
       const response = await fetch(
@@ -93,24 +213,26 @@ function App() {
         }
       );
 
-      if (!response.ok) {
-        const data = await response.json();
+      const data = await response.json();
 
+      if (!response.ok) {
         alert(
           data.detail || "Failed to update task"
         );
-
         return;
       }
 
-      await loadTasks();
+      await loadTasks(project.id);
     } catch (error) {
       console.error("Error updating task:", error);
       alert("Failed to update task");
     }
   };
 
+  // --------------------------------------------------
   // Delete Task
+  // --------------------------------------------------
+
   const deleteTask = async (taskId) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this task?"
@@ -128,19 +250,28 @@ function App() {
         }
       );
 
+      const data = await response.json();
+
       if (!response.ok) {
-        alert("Failed to delete task");
+        alert(
+          data.detail || "Failed to delete task"
+        );
         return;
       }
 
-      await loadTasks();
+      await loadTasks(project.id);
+
+      alert("Task deleted successfully!");
     } catch (error) {
       console.error("Error deleting task:", error);
       alert("Failed to delete task");
     }
   };
 
+  // --------------------------------------------------
   // Start Edit
+  // --------------------------------------------------
+
   const startEdit = (item) => {
     setEditingTask({
       id: item.id,
@@ -151,8 +282,15 @@ function App() {
     });
   };
 
+  // --------------------------------------------------
   // Save Edit
+  // --------------------------------------------------
+
   const saveEdit = async () => {
+    if (!editingTask) {
+      return;
+    }
+
     if (!editingTask.title.trim()) {
       alert("Task title cannot be empty");
       return;
@@ -167,9 +305,10 @@ function App() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            title: editingTask.title,
+            title: editingTask.title.trim(),
             priority: editingTask.priority,
-            due_date: editingTask.due_date,
+            due_date:
+              editingTask.due_date.trim() || null,
             completed: editingTask.completed,
           }),
         }
@@ -181,13 +320,12 @@ function App() {
         alert(
           data.detail || "Failed to update task"
         );
-
         return;
       }
 
       setEditingTask(null);
 
-      await loadTasks();
+      await loadTasks(project.id);
 
       alert("Task updated successfully!");
     } catch (error) {
@@ -196,14 +334,25 @@ function App() {
     }
   };
 
+  // --------------------------------------------------
   // Logout
+  // --------------------------------------------------
+
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    window.location.href = "/login";
+    localStorage.removeItem("taskflow_user");
+
+    setUser(null);
+    setProject(null);
+    setTasks([]);
+
+    navigate("/login");
   };
 
+  // --------------------------------------------------
   // Search + Filter + Sort
-  const filteredTasks = tasks
+  // --------------------------------------------------
+
+  const filteredTasks = [...tasks]
     .filter((item) =>
       item.title
         .toLowerCase()
@@ -235,7 +384,10 @@ function App() {
       return 0;
     });
 
+  // --------------------------------------------------
   // Statistics
+  // --------------------------------------------------
+
   const totalTasks = tasks.length;
 
   const completedTasks = tasks.filter(
@@ -252,10 +404,38 @@ function App() {
           (completedTasks / totalTasks) * 100
         );
 
+  // --------------------------------------------------
+  // Loading
+  // --------------------------------------------------
+
+  if (loading) {
+    return (
+      <div className="taskflow">
+        <div
+          style={{
+            minHeight: "100vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "20px",
+            fontWeight: "600",
+          }}
+        >
+          Loading TaskFlow...
+        </div>
+      </div>
+    );
+  }
+
+  // --------------------------------------------------
+  // Dashboard
+  // --------------------------------------------------
+
   return (
     <div className="taskflow">
 
       {/* Navbar */}
+
       <nav className="navbar">
 
         <div className="logo">
@@ -264,11 +444,14 @@ function App() {
 
         <div className="nav-right">
 
-          <div className="nav-text">
-            <span>
-              Task Management Dashboard
-            </span>
-          </div>
+          {user && (
+            <div className="nav-text">
+              Welcome,{" "}
+              <strong>
+                {user.name}
+              </strong>
+            </div>
+          )}
 
           <button
             className="logout-btn"
@@ -282,6 +465,7 @@ function App() {
       </nav>
 
       {/* Dashboard */}
+
       <main className="dashboard">
 
         <h1 className="dashboard-title">
@@ -292,7 +476,21 @@ function App() {
           Manage your tasks efficiently and stay productive.
         </p>
 
+        {/* Project */}
+
+        {project && (
+          <div
+            style={{
+              marginBottom: "20px",
+              fontWeight: "600",
+            }}
+          >
+            Project: {project.name}
+          </div>
+        )}
+
         {/* Progress */}
+
         <div className="progress-card">
 
           <div className="progress-header">
@@ -321,26 +519,49 @@ function App() {
         </div>
 
         {/* Statistics */}
+
         <div className="stats">
 
           <div className="stat-card">
-            <h2>{totalTasks}</h2>
-            <p>Total Tasks</p>
+
+            <h2>
+              {totalTasks}
+            </h2>
+
+            <p>
+              Total Tasks
+            </p>
+
           </div>
 
           <div className="stat-card">
-            <h2>{completedTasks}</h2>
-            <p>Completed</p>
+
+            <h2>
+              {completedTasks}
+            </h2>
+
+            <p>
+              Completed
+            </p>
+
           </div>
 
           <div className="stat-card">
-            <h2>{pendingTasks}</h2>
-            <p>Pending</p>
+
+            <h2>
+              {pendingTasks}
+            </h2>
+
+            <p>
+              Pending
+            </p>
+
           </div>
 
         </div>
 
         {/* Tasks Header */}
+
         <div className="tasks-header">
 
           <h2>
@@ -359,6 +580,7 @@ function App() {
         </div>
 
         {/* Search / Filter / Sort */}
+
         <div className="filters">
 
           <input
@@ -376,6 +598,7 @@ function App() {
               setPriorityFilter(e.target.value)
             }
           >
+
             <option value="all">
               All Priorities
             </option>
@@ -391,6 +614,7 @@ function App() {
             <option value="low">
               Low
             </option>
+
           </select>
 
           <select
@@ -399,6 +623,7 @@ function App() {
               setSortBy(e.target.value)
             }
           >
+
             <option value="none">
               Sort By
             </option>
@@ -410,11 +635,13 @@ function App() {
             <option value="priority">
               Priority
             </option>
+
           </select>
 
         </div>
 
         {/* Add Task Form */}
+
         {showForm && (
 
           <div className="task-form">
@@ -426,6 +653,11 @@ function App() {
               onChange={(e) =>
                 setTask(e.target.value)
               }
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  addTask();
+                }
+              }}
             />
 
             <button
@@ -450,6 +682,7 @@ function App() {
         )}
 
         {/* Edit Form */}
+
         {editingTask && (
 
           <div className="edit-form">
@@ -526,6 +759,7 @@ function App() {
         )}
 
         {/* Task List */}
+
         <div>
 
           {filteredTasks.length === 0 ? (
@@ -558,6 +792,7 @@ function App() {
                 </h3>
 
                 {/* Priority */}
+
                 <p className="task-info">
 
                   <strong>
@@ -572,7 +807,8 @@ function App() {
 
                 </p>
 
-                {/* Due + Status */}
+                {/* Details */}
+
                 <div className="task-details">
 
                   <span className="detail-label">
@@ -602,6 +838,7 @@ function App() {
                 </div>
 
                 {/* Actions */}
+
                 <div className="task-actions">
 
                   <button
