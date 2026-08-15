@@ -12,7 +12,29 @@ function App() {
   const [search, setSearch] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [sortBy, setSortBy] = useState("none");
-    const addTask = async () => {
+
+  // Load Tasks
+  const loadTasks = async () => {
+    try {
+      const response = await fetch(`${API_URL}/tasks`);
+
+      if (!response.ok) {
+        throw new Error("Failed to load tasks");
+      }
+
+      const data = await response.json();
+      setTasks(data);
+    } catch (error) {
+      console.error("Error loading tasks:", error);
+    }
+  };
+
+  useEffect(() => {
+    loadTasks();
+  }, []);
+
+  // Add Task
+  const addTask = async () => {
     if (!task.trim()) {
       alert("Please enter a task");
       return;
@@ -42,6 +64,7 @@ function App() {
 
       setTask("");
       setShowForm(false);
+
       await loadTasks();
 
       alert("Task added successfully!");
@@ -51,6 +74,7 @@ function App() {
     }
   };
 
+  // Complete / Pending
   const toggleComplete = async (item) => {
     try {
       const response = await fetch(
@@ -71,7 +95,11 @@ function App() {
 
       if (!response.ok) {
         const data = await response.json();
-        alert(data.detail || "Failed to update task");
+
+        alert(
+          data.detail || "Failed to update task"
+        );
+
         return;
       }
 
@@ -82,6 +110,7 @@ function App() {
     }
   };
 
+  // Delete Task
   const deleteTask = async (taskId) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this task?"
@@ -110,7 +139,9 @@ function App() {
       alert("Failed to delete task");
     }
   };
-    const startEdit = (item) => {
+
+  // Start Edit
+  const startEdit = (item) => {
     setEditingTask({
       id: item.id,
       title: item.title,
@@ -120,6 +151,7 @@ function App() {
     });
   };
 
+  // Save Edit
   const saveEdit = async () => {
     if (!editingTask.title.trim()) {
       alert("Task title cannot be empty");
@@ -146,11 +178,15 @@ function App() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.detail || "Failed to update task");
+        alert(
+          data.detail || "Failed to update task"
+        );
+
         return;
       }
 
       setEditingTask(null);
+
       await loadTasks();
 
       alert("Task updated successfully!");
@@ -160,9 +196,18 @@ function App() {
     }
   };
 
+  // Logout
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    window.location.href = "/login";
+  };
+
+  // Search + Filter + Sort
   const filteredTasks = tasks
     .filter((item) =>
-      item.title.toLowerCase().includes(search.toLowerCase())
+      item.title
+        .toLowerCase()
+        .includes(search.toLowerCase())
     )
     .filter((item) =>
       priorityFilter === "all"
@@ -190,317 +235,418 @@ function App() {
       return 0;
     });
 
+  // Statistics
   const totalTasks = tasks.length;
 
   const completedTasks = tasks.filter(
     (item) => item.completed
   ).length;
 
-  const pendingTasks = totalTasks - completedTasks;
+  const pendingTasks =
+    totalTasks - completedTasks;
 
   const progressPercentage =
     totalTasks === 0
       ? 0
-      : Math.round((completedTasks / totalTasks) * 100);
+      : Math.round(
+          (completedTasks / totalTasks) * 100
+        );
 
-  const loadTasks = async () => {
-    try {
-      const response = await fetch(`${API_URL}/tasks`);
+  return (
+    <div className="taskflow">
 
-      if (!response.ok) {
-        throw new Error("Failed to load tasks");
-      }
+      {/* Navbar */}
+      <nav className="navbar">
 
-      const data = await response.json();
-      setTasks(data);
-    } catch (error) {
-      console.error("Error loading tasks:", error);
-    }
-  };
-
-  useEffect(() => {
-    loadTasks();
-  }, []);
-
- return (
-  <div className="taskflow">
-    <nav className="navbar">
-      <div className="logo">TaskFlow</div>
-
-      <div className="nav-text">
-        Task Management Dashboard
-      </div>
-    </nav>
-
-    <main className="dashboard">
-      <h1 className="dashboard-title">
-        TaskFlow Dashboard
-      </h1>
-
-      <p className="subtitle">
-        Manage your tasks efficiently and stay productive.
-      </p>
-
-      {/* Progress */}
-      <div className="progress-card">
-        <div className="progress-header">
-          <span>Task Progress</span>
-
-          <strong>{progressPercentage}%</strong>
+        <div className="logo">
+          TaskFlow
         </div>
 
-        <div className="progress-bar">
-          <div
-            className="progress-fill"
-            style={{
-              width: `${progressPercentage}%`,
-            }}
-          />
-        </div>
-      </div>
+        <div className="nav-right">
 
-      {/* Statistics */}
-      <div className="stats">
-        <div className="stat-card">
-          <h2>{totalTasks}</h2>
-          <p>Total Tasks</p>
-        </div>
-
-        <div className="stat-card">
-          <h2>{completedTasks}</h2>
-          <p>Completed</p>
-        </div>
-
-        <div className="stat-card">
-          <h2>{pendingTasks}</h2>
-          <p>Pending</p>
-        </div>
-      </div>
-
-      {/* Tasks Header */}
-      <div className="tasks-header">
-        <h2>My Tasks</h2>
-
-        <button
-          className="add-btn"
-          onClick={() => setShowForm(true)}
-        >
-          + Add Task
-        </button>
-      </div>
-
-      {/* Search / Filter / Sort */}
-      <div className="filters">
-        <input
-          type="text"
-          placeholder="Search tasks..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-
-        <select
-          value={priorityFilter}
-          onChange={(e) =>
-            setPriorityFilter(e.target.value)
-          }
-        >
-          <option value="all">All Priorities</option>
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
-        </select>
-
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-        >
-          <option value="none">Sort By</option>
-          <option value="title">Title</option>
-          <option value="priority">Priority</option>
-        </select>
-      </div>
-
-      {/* Add Task Form */}
-      {showForm && (
-        <div className="task-form">
-          <input
-            type="text"
-            placeholder="Enter your task"
-            value={task}
-            onChange={(e) => setTask(e.target.value)}
-          />
+          <div className="nav-text">
+            <span>
+              Task Management Dashboard
+            </span>
+          </div>
 
           <button
-            className="save-btn"
-            onClick={addTask}
+            className="logout-btn"
+            onClick={handleLogout}
           >
-            Save Task
+            Logout
           </button>
+
+        </div>
+
+      </nav>
+
+      {/* Dashboard */}
+      <main className="dashboard">
+
+        <h1 className="dashboard-title">
+          TaskFlow Dashboard
+        </h1>
+
+        <p className="subtitle">
+          Manage your tasks efficiently and stay productive.
+        </p>
+
+        {/* Progress */}
+        <div className="progress-card">
+
+          <div className="progress-header">
+
+            <span>
+              Task Progress
+            </span>
+
+            <strong>
+              {progressPercentage}%
+            </strong>
+
+          </div>
+
+          <div className="progress-bar">
+
+            <div
+              className="progress-fill"
+              style={{
+                width: `${progressPercentage}%`,
+              }}
+            />
+
+          </div>
+
+        </div>
+
+        {/* Statistics */}
+        <div className="stats">
+
+          <div className="stat-card">
+            <h2>{totalTasks}</h2>
+            <p>Total Tasks</p>
+          </div>
+
+          <div className="stat-card">
+            <h2>{completedTasks}</h2>
+            <p>Completed</p>
+          </div>
+
+          <div className="stat-card">
+            <h2>{pendingTasks}</h2>
+            <p>Pending</p>
+          </div>
+
+        </div>
+
+        {/* Tasks Header */}
+        <div className="tasks-header">
+
+          <h2>
+            My Tasks
+          </h2>
 
           <button
-            className="cancel-btn"
-            onClick={() => {
-              setShowForm(false);
-              setTask("");
-            }}
+            className="add-btn"
+            onClick={() =>
+              setShowForm(true)
+            }
           >
-            Cancel
+            + Add Task
           </button>
-        </div>
-      )}
 
-      {/* Edit Form */}
-      {editingTask && (
-        <div className="edit-form">
-          <h3>Edit Task</h3>
+        </div>
+
+        {/* Search / Filter / Sort */}
+        <div className="filters">
 
           <input
             type="text"
-            value={editingTask.title}
+            placeholder="Search tasks..."
+            value={search}
             onChange={(e) =>
-              setEditingTask({
-                ...editingTask,
-                title: e.target.value,
-              })
+              setSearch(e.target.value)
             }
           />
 
           <select
-            value={editingTask.priority}
+            value={priorityFilter}
             onChange={(e) =>
-              setEditingTask({
-                ...editingTask,
-                priority: e.target.value,
-              })
+              setPriorityFilter(e.target.value)
             }
           >
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
+            <option value="all">
+              All Priorities
+            </option>
+
+            <option value="high">
+              High
+            </option>
+
+            <option value="medium">
+              Medium
+            </option>
+
+            <option value="low">
+              Low
+            </option>
           </select>
 
-          <input
-            type="text"
-            placeholder="Due date"
-            value={editingTask.due_date}
+          <select
+            value={sortBy}
             onChange={(e) =>
-              setEditingTask({
-                ...editingTask,
-                due_date: e.target.value,
-              })
+              setSortBy(e.target.value)
             }
-          />
-
-          <button
-            className="save-btn"
-            onClick={saveEdit}
           >
-            Save Changes
-          </button>
+            <option value="none">
+              Sort By
+            </option>
 
-          <button
-            className="cancel-btn"
-            onClick={() => setEditingTask(null)}
-          >
-            Cancel
-          </button>
+            <option value="title">
+              Title
+            </option>
+
+            <option value="priority">
+              Priority
+            </option>
+          </select>
+
         </div>
-      )}
 
-      {/* Task List */}
-      <div>
-        {filteredTasks.length === 0 ? (
-          <p>No tasks found.</p>
-        ) : (
-          filteredTasks.map((item) => (
-            <div
-              key={item.id}
-              className={`task-card ${
-                item.completed ? "completed" : ""
-              }`}
+        {/* Add Task Form */}
+        {showForm && (
+
+          <div className="task-form">
+
+            <input
+              type="text"
+              placeholder="Enter your task"
+              value={task}
+              onChange={(e) =>
+                setTask(e.target.value)
+              }
+            />
+
+            <button
+              className="save-btn"
+              onClick={addTask}
             >
-              <h3
-                className={`task-title ${
-                  item.completed ? "completed" : ""
+              Save Task
+            </button>
+
+            <button
+              className="cancel-btn"
+              onClick={() => {
+                setShowForm(false);
+                setTask("");
+              }}
+            >
+              Cancel
+            </button>
+
+          </div>
+
+        )}
+
+        {/* Edit Form */}
+        {editingTask && (
+
+          <div className="edit-form">
+
+            <h3>
+              Edit Task
+            </h3>
+
+            <input
+              type="text"
+              value={editingTask.title}
+              onChange={(e) =>
+                setEditingTask({
+                  ...editingTask,
+                  title: e.target.value,
+                })
+              }
+            />
+
+            <select
+              value={editingTask.priority}
+              onChange={(e) =>
+                setEditingTask({
+                  ...editingTask,
+                  priority: e.target.value,
+                })
+              }
+            >
+
+              <option value="low">
+                Low
+              </option>
+
+              <option value="medium">
+                Medium
+              </option>
+
+              <option value="high">
+                High
+              </option>
+
+            </select>
+
+            <input
+              type="text"
+              placeholder="Due date"
+              value={editingTask.due_date}
+              onChange={(e) =>
+                setEditingTask({
+                  ...editingTask,
+                  due_date: e.target.value,
+                })
+              }
+            />
+
+            <button
+              className="save-btn"
+              onClick={saveEdit}
+            >
+              Save Changes
+            </button>
+
+            <button
+              className="cancel-btn"
+              onClick={() =>
+                setEditingTask(null)
+              }
+            >
+              Cancel
+            </button>
+
+          </div>
+
+        )}
+
+        {/* Task List */}
+        <div>
+
+          {filteredTasks.length === 0 ? (
+
+            <p>
+              No tasks found.
+            </p>
+
+          ) : (
+
+            filteredTasks.map((item) => (
+
+              <div
+                key={item.id}
+                className={`task-card ${
+                  item.completed
+                    ? "completed"
+                    : ""
                 }`}
               >
-                {item.title}
-              </h3>
 
-              {/* Priority */}
-              <p className="task-info">
-                <strong>Priority:</strong>{" "}
-
-                <span
-                  className={`priority-badge ${item.priority}`}
-                >
-                  {item.priority.toUpperCase()}
-                </span>
-              </p>
-
-              {/* Due + Status */}
-              <div className="task-details">
-                <span className="detail-label">
-                  Due:
-                </span>
-
-                <span className="due-date">
-                  {item.due_date || "Not set"}
-                </span>
-
-                <span className="detail-label">
-                  Status:
-                </span>
-
-                <span
-                  className={`status-badge ${
+                <h3
+                  className={`task-title ${
                     item.completed
                       ? "completed"
-                      : "pending"
+                      : ""
                   }`}
                 >
-                  {item.completed
-                    ? "COMPLETED"
-                    : "PENDING"}
-                </span>
+                  {item.title}
+                </h3>
+
+                {/* Priority */}
+                <p className="task-info">
+
+                  <strong>
+                    Priority:
+                  </strong>{" "}
+
+                  <span
+                    className={`priority-badge ${item.priority}`}
+                  >
+                    {item.priority.toUpperCase()}
+                  </span>
+
+                </p>
+
+                {/* Due + Status */}
+                <div className="task-details">
+
+                  <span className="detail-label">
+                    Due:
+                  </span>
+
+                  <span className="due-date">
+                    {item.due_date || "Not set"}
+                  </span>
+
+                  <span className="detail-label">
+                    Status:
+                  </span>
+
+                  <span
+                    className={`status-badge ${
+                      item.completed
+                        ? "completed"
+                        : "pending"
+                    }`}
+                  >
+                    {item.completed
+                      ? "COMPLETED"
+                      : "PENDING"}
+                  </span>
+
+                </div>
+
+                {/* Actions */}
+                <div className="task-actions">
+
+                  <button
+                    className="complete-btn"
+                    onClick={() =>
+                      toggleComplete(item)
+                    }
+                  >
+                    {item.completed
+                      ? "Mark Pending"
+                      : "Complete Task"}
+                  </button>
+
+                  <button
+                    className="edit-btn"
+                    onClick={() =>
+                      startEdit(item)
+                    }
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    className="delete-btn"
+                    onClick={() =>
+                      deleteTask(item.id)
+                    }
+                  >
+                    Delete
+                  </button>
+
+                </div>
+
               </div>
 
-              {/* Actions */}
-              <div className="task-actions">
-                <button
-                  className="complete-btn"
-                  onClick={() =>
-                    toggleComplete(item)
-                  }
-                >
-                  {item.completed
-                    ? "Mark Pending"
-                    : "Complete Task"}
-                </button>
+            ))
 
-                <button
-                  className="edit-btn"
-                  onClick={() => startEdit(item)}
-                >
-                  Edit
-                </button>
+          )}
 
-                <button
-                  className="delete-btn"
-                  onClick={() =>
-                    deleteTask(item.id)
-                  }
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </main>
-  </div>
-);
+        </div>
+
+      </main>
+
+    </div>
+  );
 }
 
 export default App;

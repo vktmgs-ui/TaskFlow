@@ -6,6 +6,17 @@ class UserCreate(BaseModel):
     email: EmailStr
 
 
+class SignupRequest(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
 class ProjectCreate(BaseModel):
     name: str
     owner_id: int
@@ -27,6 +38,8 @@ class TaskCreate(BaseModel):
             raise ValueError("Title cannot be blank")
 
         return value
+
+
 class TaskUpdate(BaseModel):
     title: str
     priority: str = Field(
@@ -35,6 +48,7 @@ class TaskUpdate(BaseModel):
     )
     due_date: str | None = None
     completed: bool = False
+
 
 class QuickAddRequest(BaseModel):
     description: str

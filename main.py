@@ -1,21 +1,32 @@
 from fastapi import FastAPI, Depends, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+
 from quick_add import parse_quick_add
 from database import engine, Base, get_db
 import models
+
 from schemas import (
     UserCreate,
     ProjectCreate,
     TaskCreate,
     TaskUpdate,
-    QuickAddRequest
+    QuickAddRequest,
+    SignupRequest,
+    LoginRequest
 )
-from algorithms import insertion_sort, binary_search, linear_search
+
+from algorithms import (
+    insertion_sort,
+    binary_search,
+    linear_search
+)
+
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -41,7 +52,72 @@ def test_database(db: Session = Depends(get_db)):
     return {
         "message": "Database connection is working"
     }
+@app.post("/auth/signup")
+def signup(
+    user_data: SignupRequest,
+    db: Session = Depends(get_db)
+):
+    existing_user = (
+        db.query(models.User)
+        .filter(models.User.email == user_data.email)
+        .first()
+    )
 
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="Email already registered"
+        )
+
+    new_user = models.User(
+        name=user_data.name,
+        email=user_data.email,
+        password=user_data.password
+    )
+
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    return {
+        "message": "Signup successful",
+        "user": {
+            "id": new_user.id,
+            "name": new_user.name,
+            "email": new_user.email
+        }
+    }
+@app.post("/auth/login")
+def login(
+    user_data: LoginRequest,
+    db: Session = Depends(get_db)
+):
+    user = (
+        db.query(models.User)
+        .filter(models.User.email == user_data.email)
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+
+    if user.password != user_data.password:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+
+    return {
+        "message": "Login successful",
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email
+        }
+    }
 
 @app.post("/users")
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
